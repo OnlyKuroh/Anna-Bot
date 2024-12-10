@@ -1,0 +1,47 @@
+[
+    {
+        "name": "RB",
+        "gen": 1,
+        "url": "gen1.json"
+    },
+    {
+        "name": "GS",
+        "gen": 2,
+        "url": "gen2.json"
+    },
+    {
+        "name": "RS",
+        "gen": 3,
+        "url": "gen3.json"
+    },
+    {
+        "name": "DP",
+        "gen": 4,
+        "url": "gen4.json"
+    },
+    {
+        "name": "BW",
+        "gen": 5,
+        "url": "gen5.json"
+    },
+    {
+        "name": "XY",
+        "gen": 6,
+        "url": "gen6.json"
+    },
+    {
+        "name": "SM",
+        "gen": 7,
+        "url": "gen7.json"
+    },
+    {
+        "name": "SS",
+        "gen": 8,
+        "url": "gen8.json"
+    },
+    {
+        "name": "SV",
+        "gen": 9,
+        "url": "gen9.json"
+    }
+]
