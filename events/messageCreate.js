@@ -4,13 +4,11 @@ const Fuse = require('fuse.js');
 const RAID_CHANNEL_ID = '1313727080424542248';
 
 const fuseOptions = {
-    threshold: 0.4, // Define a similaridade mínima (quanto menor, mais precisa)
-    keys: ['name'], // Procurar no campo "name"
-    includeScore: true // Incluir o score no resultado
+    threshold: 0.4,
+    keys: ['name'],
+    includeScore: true
 };
 
-
-// Mapeamento de emojis para tipos
 const typeEmojis = {
     normal: '<:Normal:1314967318543204404>',
     fire: '<:Fire:1314967284384534580>',
@@ -40,31 +38,24 @@ module.exports = async (client, message) => {
     const allPokemonUrl = `https://pokeapi.co/api/v2/pokemon?limit=10000`;
 
     try {
-        // Obter todos os nomes de Pokémon
         const allPokemonResponse = await axios.get(allPokemonUrl);
         const allPokemonNames = allPokemonResponse.data.results.map(p => p.name);
-
-        // Inicializar o Fuse.js com os dados de Pokémon
         const fuse = new Fuse(allPokemonNames, fuseOptions);
-
-        // Buscar o Pokémon com base na entrada
         const results = fuse.search(inputName);
 
         if (results.length === 0 || results[0].score > 0.4) {
-            return { error: `Não consegui encontrar um Pokémon com o nome "${name}". Tente novamente.` }
+            return { error: `Não consegui encontrar um Pokémon com o nome "${inputName}". Tente novamente.` };
         }
 
         const correctedName = results[0].item;
-        console.log(correctedName)
 
         const apiUrl = `https://pokeapi.co/api/v2/pokemon/${correctedName}`;
         const speciesUrl = `https://pokeapi.co/api/v2/pokemon-species/${correctedName}`;
         const typeUrl = `https://pokeapi.co/api/v2/type`;
 
-        // Obter informações do Pokémon
         const [pokemonResponse, speciesResponse, typeResponse] = await Promise.all([
             axios.get(apiUrl),
-            axios.get(speciesUrl).catch(() => null),
+            axios.get(speciesUrl).catch(() => null), // Permitir falha sem quebrar o código
             axios.get(typeUrl),
         ]);
 
@@ -72,7 +63,6 @@ module.exports = async (client, message) => {
         const speciesData = speciesResponse ? speciesResponse.data : null;
         const typeData = typeResponse.data;
 
-        // **Tipo e Habilidades**
         const types = pokemonData.types
             .map(type => `${typeEmojis[type.type.name] || ''}`)
             .join(' ');
@@ -80,7 +70,20 @@ module.exports = async (client, message) => {
             .map(ability => `${ability.ability.name}${ability.is_hidden ? ' (HA)' : ''}`)
             .join(', ');
 
-        // **Fraquezas e Resistências**
+        // Egg Groups
+        const eggGroups = speciesData?.egg_groups
+            ? speciesData.egg_groups.map(group => group.name).join(', ')
+            : 'Desconhecido';
+
+        // Gender Rate
+        const genderRate = speciesData?.gender_rate;
+        let genderInfo = 'Sem gênero';
+        if (genderRate !== undefined && genderRate >= 0) {
+            const femalePercentage = (genderRate / 8) * 100;
+            const malePercentage = 100 - femalePercentage;
+            genderInfo = `Macho: ${malePercentage.toFixed(1)}% | Fêmea: ${femalePercentage.toFixed(1)}%`;
+        }
+
         const typeEffectiveness = {};
         typeData.results.forEach(t => {
             typeEffectiveness[t.name] = 1;
@@ -105,18 +108,15 @@ module.exports = async (client, message) => {
             .map(([key]) => `${typeEmojis[key] || ''}`)
             .join(' ');
 
-        // **Ataques Aprendidos**
         const level100Moves = pokemonData.moves
             .filter(move => move.version_group_details.some(detail => detail.level_learned_at === 100))
             .map(move => move.move.name)
             .join(', ') || 'Nenhum';
 
-        // **Stats como Level 100**
         const level100Stats = pokemonData.stats
             .map(stat => `${stat.stat.name}: ${Math.floor(((2 * stat.base_stat + 252 / 4) * 100) / 100 + 5)}`)
             .join('\n');
 
-        // Criar o embed
         const embed = new EmbedBuilder()
             .setColor('#FFA500')
             .setTitle(`${pokemonData.name.toUpperCase()} (#${speciesData ? speciesData.pokedex_numbers[0]?.entry_number : '???'})`)
@@ -128,10 +128,11 @@ module.exports = async (client, message) => {
                 { name: 'Resistências', value: resistances || 'Nenhuma', inline: false },
                 { name: 'Principais Ataques', value: level100Moves, inline: false },
                 { name: 'Stats (Level 100)', value: `\`\`\`${level100Stats}\`\`\``, inline: false },
+                { name: 'Egg Grupo', value: eggGroups || 'Nenhum', inline: true },
+                { name: 'Gênero', value: genderInfo, inline: true },
             )
             .setFooter({ text: 'Dados fornecidos pela PokéAPI' });
 
-        // Responder no canal
         await message.channel.send({ embeds: [embed] });
     } catch (error) {
         console.error(error);
